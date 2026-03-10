@@ -253,22 +253,22 @@ function filterOrders(query) {
     return;
   }
   lastFilteredOrders = cachedOrders.filter(order => {
-    const itemNames = order.items.map(i => getMenuItemName(i.idItem)).join(' ');
-    const itemIds = order.items.map(i => String(i.idItem)).join(' ');
+    // Número do pedido: extrai só os dígitos e compara
     const orderNum = order.numeroPedido.replace(/\D/g, '');
     const queryNum = query.replace(/\D/g, '');
-    const searchable = [
-      order.numeroPedido,
-      orderNum,
-      formatCurrency(order.valorTotal),
-      formatDate(order.dataCriacao),
-      itemNames,
-      itemIds
-    ].join(' ').toLowerCase();
 
-    if (searchable.includes(query)) return true;
-    if (queryNum && orderNum.includes(queryNum)) return true;
-    if (query.length >= 3) return fuzzyMatch(searchable, query);
+    // Se a query for só números, compara contra o número do pedido
+    if (queryNum && query === queryNum) {
+      return orderNum === queryNum || orderNum.endsWith(queryNum.padStart(4, '0')) || orderNum.includes(queryNum);
+    }
+
+    // Número do pedido (texto completo, ex: "PED-0001")
+    if (order.numeroPedido.toLowerCase().includes(query)) return true;
+
+    // Nomes dos itens do cardápio
+    const itemNames = order.items.map(i => getMenuItemName(i.idItem)).join(' ').toLowerCase();
+    if (itemNames.includes(query)) return true;
+
     return false;
   });
   renderOrdersTable(lastFilteredOrders);
