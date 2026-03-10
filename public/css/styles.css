@@ -723,6 +723,48 @@ tr:last-child td { border-bottom: none; }
 .empty-state .empty-icon { font-size: 3rem; margin-bottom: 10px; }
 .empty-state p { font-size: 0.9rem; font-weight: 500; }
 
+/* Paginação */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 0 4px;
+  flex-wrap: wrap;
+}
+.page-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  color: #ccc;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.page-btn:hover:not(:disabled) {
+  background: rgba(255, 107, 53, 0.2);
+  border-color: #ff6b35;
+  color: #ff6b35;
+}
+.page-btn.active {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  border-color: transparent;
+  color: white;
+  font-weight: 700;
+}
+.page-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.page-info {
+  margin-left: 6px;
+  font-size: 0.78rem;
+  color: #888;
+}
+
 /* Toast Notification */
 .toast {
   position: fixed;

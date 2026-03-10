@@ -202,9 +202,11 @@ function getMenuItemName(id) {
   return item ? item.name : `Item #${escapeHtml(id)}`;
 }
 
-// ============ BUSCA FUZZY (Levenshtein simplificado) ============
+// ============ BUSCA + PAGINAÇÃO ============
 
 let cachedOrders = [];
+let currentPage = 1;
+const PAGE_SIZE = 4;
 
 // Distância de Levenshtein
 function levenshtein(a, b) {
@@ -242,6 +244,7 @@ function fuzzyMatch(text, query) {
 
 // Filtra pedidos na tabela (client-side)
 function filterOrders(query) {
+  currentPage = 1;
   query = query.trim().toLowerCase();
   if (!query) {
     renderOrdersTable(cachedOrders);
@@ -250,7 +253,6 @@ function filterOrders(query) {
   const filtered = cachedOrders.filter(order => {
     const itemNames = order.items.map(i => getMenuItemName(i.idItem)).join(' ');
     const itemIds = order.items.map(i => String(i.idItem)).join(' ');
-    // Extrai só números do pedido para match numérico (ex: "1" match "PED-0001")
     const orderNum = order.numeroPedido.replace(/\D/g, '');
     const queryNum = query.replace(/\D/g, '');
     const searchable = [
@@ -262,11 +264,8 @@ function filterOrders(query) {
       itemIds
     ].join(' ').toLowerCase();
 
-    // Substring simples primeiro
     if (searchable.includes(query)) return true;
-    // Match numérico: "1" encontra pedido cujo número termina em "1"
     if (queryNum && orderNum.includes(queryNum)) return true;
-    // Fuzzy levenshtein apenas para queries maiores
     if (query.length >= 3) return fuzzyMatch(searchable, query);
     return false;
   });
@@ -280,6 +279,7 @@ async function loadOrders() {
   if (!data) return;
 
   cachedOrders = data.orders;
+  currentPage = 1;
 
   // Atualiza stats
   const totalOrders = cachedOrders.length;
@@ -299,12 +299,17 @@ async function loadOrders() {
   }
 }
 
-// Renderiza array de pedidos na tabela
+// Renderiza array de pedidos na tabela com paginação
 function renderOrdersTable(orders) {
   const tbody = document.getElementById('ordersTable');
+  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageOrders = orders.slice(start, start + PAGE_SIZE);
 
   if (orders.length > 0) {
-    tbody.innerHTML = orders.map(order => `
+    tbody.innerHTML = pageOrders.map(order => `
       <tr>
         <td class="order-id-cell">${escapeHtml(order.numeroPedido)}</td>
         <td class="value-cell">${formatCurrency(order.valorTotal)}</td>
@@ -328,6 +333,47 @@ function renderOrdersTable(orders) {
       </tr>
     `;
   }
+
+  renderPagination(orders.length, totalPages);
+}
+
+function renderPagination(totalItems, totalPages) {
+  const container = document.getElementById('paginationContainer');
+  if (!container) return;
+
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  let html = `<div class="pagination">`;
+  html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>›</button>`;
+  html += `<span class="page-info">${totalItems} pedido${totalItems !== 1 ? 's' : ''}</span>`;
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function goToPage(page) {
+  const query = document.getElementById('orderSearchInput').value.trim().toLowerCase();
+  const totalPages = Math.max(1, Math.ceil(
+    (!query ? cachedOrders : cachedOrders.filter(order => {
+      const itemNames = order.items.map(i => getMenuItemName(i.idItem)).join(' ');
+      const orderNum = order.numeroPedido.replace(/\D/g, '');
+      const queryNum = query.replace(/\D/g, '');
+      const searchable = [order.numeroPedido, orderNum, formatCurrency(order.valorTotal), formatDate(order.dataCriacao), itemNames].join(' ').toLowerCase();
+      if (searchable.includes(query)) return true;
+      if (queryNum && orderNum.includes(queryNum)) return true;
+      if (query.length >= 3) return fuzzyMatch(searchable, query);
+      return false;
+    })).length / PAGE_SIZE
+  ));
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  filterOrders(document.getElementById('orderSearchInput').value);
 }
 
 // ============ DELETAR PEDIDO ============
