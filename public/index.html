@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍔 Burger Orders - Gerenciamento de Pedidos</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+  <!-- ============ TELA DE LOGIN ============ -->
+  <div id="loginScreen" class="login-screen active">
+    <div class="login-card">
+      <div class="login-logo">🍔</div>
+      <h1>Burger Orders</h1>
+      <p class="subtitle">Faça login para gerenciar os pedidos</p>
+
+      <div class="login-field">
+        <label>Usuário</label>
+        <span class="field-icon">👤</span>
+        <input type="text" id="loginUser" placeholder="Digite seu usuário" value="admin">
+      </div>
+
+      <div class="login-field">
+        <label>Senha</label>
+        <span class="field-icon">🔒</span>
+        <input type="password" id="loginPass" placeholder="Digite sua senha" value="admin123">
+      </div>
+
+      <button class="btn-login" onclick="handleLogin()">Entrar</button>
+      <div id="loginError" class="login-error"></div>
+    </div>
+  </div>
+
+  <!-- ============ TELA DO APP ============ -->
+  <div id="appScreen" class="app-screen">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="header-brand">
+          <span class="logo">🍔</span>
+          <div>
+            <h1>Burger Orders</h1>
+            <small>Sistema de Gerenciamento de Pedidos</small>
+          </div>
+        </div>
+        <div class="header-user">
+          <span class="user-badge">👤 <span id="headerUsername">admin</span></span>
+          <button class="btn-logout" onclick="handleLogout()">Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navegação por abas -->
+    <nav class="nav-tabs">
+      <div class="nav-tabs-inner">
+        <button class="nav-tab active" data-tab="orders">
+          <span class="tab-icon">📋</span> Pedidos
+        </button>
+        <button class="nav-tab" data-tab="new-order">
+          <span class="tab-icon">🛒</span> Novo Pedido
+        </button>
+      </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+
+      <!-- ===== Painel: Pedidos ===== -->
+      <div id="panel-orders" class="tab-panel active">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon orange">📦</div>
+            <div class="stat-info">
+              <h3 id="statTotal">0</h3>
+              <p>Total de Pedidos</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">💰</div>
+            <div class="stat-info">
+              <h3 id="statValue">R$ 0,00</h3>
+              <p>Valor Total</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue">🍟</div>
+            <div class="stat-info">
+              <h3 id="statItems">0</h3>
+              <p>Total de Itens</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <div class="card-title">
+              <div class="card-icon">📋</div>
+              Lista de Pedidos
+            </div>
+            <div class="inline-search">
+              <span class="inline-search-icon">🔍</span>
+              <input type="text" id="orderSearchInput" placeholder="Buscar pedido..." autocomplete="off">
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº Pedido</th>
+                  <th>Valor Total</th>
+                  <th>Data Criação</th>
+                  <th>Itens</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTable">
+                <tr>
+                  <td colspan="5">
+                    <div class="empty-state">
+                      <div class="empty-icon">🍟</div>
+                      <p>Carregando pedidos...</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Painel: Novo Pedido ===== -->
+      <div id="panel-new-order" class="tab-panel">
+        <div class="card">
+          <div class="card-title">
+            <div class="card-icon">🛒</div>
+            Criar Novo Pedido
+          </div>
+
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label>Número do Pedido</label>
+              <input type="text" id="numeroPedido" placeholder="será preenchido automaticamente">
+            </div>
+            <div class="form-group">
+              <label>Data de Criação</label>
+              <input type="datetime-local" id="dataCriacao">
+            </div>
+          </div>
+
+          <div class="items-section">
+            <div class="items-header">
+              <h3>🍔 Monte seu Pedido</h3>
+              <div class="order-total-badge">
+                Total: <strong id="valorTotalDisplay">R$ 0,00</strong>
+              </div>
+            </div>
+            <input type="hidden" id="valorTotal" value="0">
+            <div id="itemsContainer">
+              <!-- Preenchido via JS (initFirstItemRow) -->
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="addItem()" style="margin-top:10px">＋ Adicionar Item</button>
+          </div>
+
+          <button class="btn btn-success btn-block" onclick="createOrder()" style="margin-top:20px">
+            🍔 Finalizar Pedido
+          </button>
+        </div>
+      </div>
+
+
+    </main>
+
+    <!-- Footer -->
+    <div class="footer-links">
+      <a href="/api-docs" target="_blank">📄 Swagger (API Docs)</a>
+      <a href="/health" target="_blank">💚 Health Check</a>
+      <span>•</span>
+      Desafio Técnico Jitterbit
+    </div>
+
+  </div>
+
+  <!-- Scripts Modulares -->
+  <script src="/js/utils.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/orders.js"></script>
+  <script src="/js/app.js"></script>
+
+</body>
+</html>
