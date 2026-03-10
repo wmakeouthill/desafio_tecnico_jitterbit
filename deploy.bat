@@ -34,8 +34,8 @@ echo ==================================================
 echo  Executando deploy no servidor...
 echo ==================================================
 
-:: Torna o script executável e roda no servidor
-ssh -i "%SSH_KEY%" %SERVER% "chmod +x %APP_DIR%/deploy.sh && %APP_DIR%/deploy.sh"
+:: Converte line endings para Unix (CRLF -> LF), torna executável e roda
+ssh -i "%SSH_KEY%" %SERVER% "sed -i 's/\r$//' %APP_DIR%/deploy.sh && chmod +x %APP_DIR%/deploy.sh && %APP_DIR%/deploy.sh"
 
 echo.
 echo ==================================================
