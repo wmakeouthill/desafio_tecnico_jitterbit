@@ -6,6 +6,17 @@ API RESTful para gerenciamento de pedidos desenvolvida com **Node.js**, **Expres
 
 ---
 
+## 🌐 Links
+
+| | URL |
+| --- | --- |
+| **Frontend (ao vivo)** | **<https://wmakeouthill.github.io/desafio_tecnico_jitterbit/>** |
+| API | <http://134.65.250.48:3000> |
+| Swagger Docs | <http://134.65.250.48:3000/api-docs> |
+| Mongo Express | <http://134.65.250.48:8081> |
+
+---
+
 ## Stack
 
 - **Node.js** + **Express** — servidor e rotas
@@ -13,6 +24,8 @@ API RESTful para gerenciamento de pedidos desenvolvida com **Node.js**, **Expres
 - **JWT** + **bcrypt** — autenticação segura
 - **Swagger UI** — documentação interativa
 - **Docker** + **Docker Compose** — containerização
+- **Oracle Always Free** — hospedagem em cloud
+- **GitHub Pages** — redirecionamento do frontend
 
 ---
 
@@ -129,15 +142,22 @@ A API recebe os dados em português e salva em inglês:
 
 ## Deploy
 
-A aplicação roda em uma instância **Oracle Always Free** via Docker Compose.
+A aplicação roda em uma instância **Oracle Always Free** via Docker.  
+O build é feito localmente e a imagem é publicada no Docker Hub — o servidor apenas faz pull e sobe os containers.
 
 ```bash
-# Primeira vez — instala Docker e configura firewall no servidor
-ssh -i "chave.key" ubuntu@<ip> 'bash -s' < scripts/server-setup.sh
-
-# Deploy — envia o código e reinicia os containers
-deploy.bat
+# Build local + push Docker Hub + restart no servidor
+./deploy.bat
 ```
+
+**Fluxo:**
+
+1. `docker build` da imagem localmente
+2. `docker push wmakeouthill/jitterbit-api:latest` para o Docker Hub
+3. SCP envia `docker-compose.yml` e `.env` para o servidor
+4. SSH: `docker pull` + `docker compose up -d` + limpeza de imagens antigas
+
+**Pré-requisito:** `docker login` antes do primeiro deploy.
 
 ---
 
