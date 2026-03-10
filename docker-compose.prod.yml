@@ -12,6 +12,12 @@ services:
     restart: unless-stopped
     networks:
       - jitterbit-network
+    deploy:
+      resources:
+        limits:
+          memory: 150M
+        reservations:
+          memory: 64M
 
   mongodb:
     image: mongo:7
@@ -20,6 +26,8 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    # Limita cache WiredTiger a 128MB (padrão pegaria ~500MB em 1GB RAM)
+    command: mongod --wiredTigerCacheSizeGB 0.15
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh --quiet
       interval: 10s
@@ -29,6 +37,12 @@ services:
     restart: unless-stopped
     networks:
       - jitterbit-network
+    deploy:
+      resources:
+        limits:
+          memory: 350M
+        reservations:
+          memory: 128M
 
   mongo-express:
     image: mongo-express:1-20
@@ -44,6 +58,10 @@ services:
     restart: unless-stopped
     networks:
       - jitterbit-network
+    deploy:
+      resources:
+        limits:
+          memory: 100M
 
 volumes:
   mongodb_data:
