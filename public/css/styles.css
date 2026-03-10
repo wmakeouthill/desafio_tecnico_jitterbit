@@ -147,6 +147,25 @@ body {
   font-weight: 500;
 }
 
+.login-hint {
+  margin-top: 18px;
+  padding: 10px 16px;
+  background: #fff8f0;
+  border: 1px dashed #f7931e;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  color: #888;
+  text-align: center;
+}
+.login-hint code {
+  background: #ffe8d6;
+  color: #c0392b;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
 /* ============ APP LAYOUT ============ */
 .app-screen { display: none; min-height: 100vh; }
 .app-screen.active { display: block; }
