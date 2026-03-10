@@ -205,6 +205,7 @@ function getMenuItemName(id) {
 // ============ BUSCA + PAGINAÇÃO ============
 
 let cachedOrders = [];
+let lastFilteredOrders = [];
 let currentPage = 1;
 const PAGE_SIZE = 4;
 
@@ -247,10 +248,11 @@ function filterOrders(query) {
   currentPage = 1;
   query = query.trim().toLowerCase();
   if (!query) {
-    renderOrdersTable(cachedOrders);
+    lastFilteredOrders = cachedOrders;
+    renderOrdersTable(lastFilteredOrders);
     return;
   }
-  const filtered = cachedOrders.filter(order => {
+  lastFilteredOrders = cachedOrders.filter(order => {
     const itemNames = order.items.map(i => getMenuItemName(i.idItem)).join(' ');
     const itemIds = order.items.map(i => String(i.idItem)).join(' ');
     const orderNum = order.numeroPedido.replace(/\D/g, '');
@@ -269,7 +271,7 @@ function filterOrders(query) {
     if (query.length >= 3) return fuzzyMatch(searchable, query);
     return false;
   });
-  renderOrdersTable(filtered);
+  renderOrdersTable(lastFilteredOrders);
 }
 
 // ============ LISTAR PEDIDOS ============
@@ -279,6 +281,7 @@ async function loadOrders() {
   if (!data) return;
 
   cachedOrders = data.orders;
+  lastFilteredOrders = data.orders;
   currentPage = 1;
 
   // Atualiza stats
@@ -316,6 +319,7 @@ function renderOrdersTable(orders) {
         <td>${formatDate(order.dataCriacao)}</td>
         <td><span class="items-badge">🍔 ${order.items.map(i => getMenuItemName(i.idItem)).join(', ')}</span></td>
         <td class="actions">
+          <button class="btn btn-warning btn-sm" onclick="openEditModal('${escapeHtml(order.numeroPedido)}')">✏️ Editar</button>
           <button class="btn btn-danger btn-sm" onclick="deleteOrder('${escapeHtml(order.numeroPedido)}')">🗑️ Excluir</button>
         </td>
       </tr>
@@ -358,22 +362,158 @@ function renderPagination(totalItems, totalPages) {
 }
 
 function goToPage(page) {
-  const query = document.getElementById('orderSearchInput').value.trim().toLowerCase();
-  const totalPages = Math.max(1, Math.ceil(
-    (!query ? cachedOrders : cachedOrders.filter(order => {
-      const itemNames = order.items.map(i => getMenuItemName(i.idItem)).join(' ');
-      const orderNum = order.numeroPedido.replace(/\D/g, '');
-      const queryNum = query.replace(/\D/g, '');
-      const searchable = [order.numeroPedido, orderNum, formatCurrency(order.valorTotal), formatDate(order.dataCriacao), itemNames].join(' ').toLowerCase();
-      if (searchable.includes(query)) return true;
-      if (queryNum && orderNum.includes(queryNum)) return true;
-      if (query.length >= 3) return fuzzyMatch(searchable, query);
-      return false;
-    })).length / PAGE_SIZE
-  ));
+  const totalPages = Math.max(1, Math.ceil(lastFilteredOrders.length / PAGE_SIZE));
   if (page < 1 || page > totalPages) return;
   currentPage = page;
-  filterOrders(document.getElementById('orderSearchInput').value);
+  renderOrdersTable(lastFilteredOrders);
+}
+
+// ============ EDITAR PEDIDO ============
+
+function openEditModal(orderId) {
+  const order = cachedOrders.find(o => o.numeroPedido === orderId);
+  if (!order) return;
+
+  document.getElementById('editNumeroPedido').value = order.numeroPedido;
+
+  // Formata data para datetime-local
+  const d = new Date(order.dataCriacao);
+  const offset = d.getTimezoneOffset() * 60000;
+  const local = new Date(d - offset);
+  document.getElementById('editDataCriacao').value = local.toISOString().slice(0, 16);
+
+  // Preenche itens
+  const container = document.getElementById('editItemsContainer');
+  container.innerHTML = '';
+  order.items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = buildItemRowHtml();
+    bindEditItemRowEvents(row);
+    container.appendChild(row);
+
+    const select = row.querySelector('.item-id');
+    const qtyInput = row.querySelector('.item-qty');
+    const priceInput = row.querySelector('.item-price');
+
+    select.value = String(item.idItem);
+    priceInput.value = item.valorItem;
+    qtyInput.value = item.quantidadeItem;
+    updateEditRowSubtotal(row);
+  });
+
+  recalcEditTotal();
+  document.getElementById('editOrderModal').classList.add('active');
+}
+
+function closeEditModal(event) {
+  if (event && event.target !== document.getElementById('editOrderModal')) return;
+  document.getElementById('editOrderModal').classList.remove('active');
+}
+
+function buildEditItemRowHtml() {
+  return `
+    <div class="form-group fg-item-select">
+      <label>Item do Cardápio</label>
+      <select class="item-id">${menuOptionsHtml()}</select>
+    </div>
+    <div class="form-group fg-qty">
+      <label>Qtd</label>
+      <input type="number" class="item-qty" value="1" min="1">
+    </div>
+    <div class="form-group fg-price">
+      <label>Unit. (R$)</label>
+      <input type="number" class="item-price" value="" min="0" readonly>
+    </div>
+    <div class="form-group fg-subtotal">
+      <label>Subtotal</label>
+      <span class="item-subtotal">R$ 0,00</span>
+    </div>
+    <button class="btn btn-danger btn-sm btn-icon" onclick="removeEditItem(this)" title="Remover">✕</button>
+  `;
+}
+
+function bindEditItemRowEvents(row) {
+  const select = row.querySelector('.item-id');
+  const qtyInput = row.querySelector('.item-qty');
+  const priceInput = row.querySelector('.item-price');
+
+  select.addEventListener('change', () => {
+    const opt = select.options[select.selectedIndex];
+    priceInput.value = Number(opt.dataset.price || 0) || '';
+    updateEditRowSubtotal(row);
+    recalcEditTotal();
+  });
+  qtyInput.addEventListener('input', () => {
+    updateEditRowSubtotal(row);
+    recalcEditTotal();
+  });
+}
+
+function updateEditRowSubtotal(row) {
+  const qty = Number(row.querySelector('.item-qty').value) || 0;
+  const price = Number(row.querySelector('.item-price').value) || 0;
+  row.querySelector('.item-subtotal').textContent = formatCurrency(qty * price);
+}
+
+function recalcEditTotal() {
+  let total = 0;
+  document.querySelectorAll('#editItemsContainer .item-row').forEach(row => {
+    total += (Number(row.querySelector('.item-qty').value) || 0) * (Number(row.querySelector('.item-price').value) || 0);
+  });
+  document.getElementById('editValorTotal').value = total;
+  document.getElementById('editValorTotalDisplay').textContent = formatCurrency(total);
+}
+
+function addEditItem() {
+  const container = document.getElementById('editItemsContainer');
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML = buildEditItemRowHtml();
+  bindEditItemRowEvents(row);
+  container.appendChild(row);
+  recalcEditTotal();
+}
+
+function removeEditItem(btn) {
+  const container = document.getElementById('editItemsContainer');
+  if (container.children.length > 1) {
+    btn.parentElement.remove();
+    recalcEditTotal();
+  } else {
+    showToast('O pedido deve ter pelo menos um item', 'error');
+  }
+}
+
+async function saveEditOrder() {
+  const orderId = document.getElementById('editNumeroPedido').value;
+  const valorTotal = Number(document.getElementById('editValorTotal').value);
+  const dataCriacaoInput = document.getElementById('editDataCriacao').value;
+
+  const items = [];
+  document.querySelectorAll('#editItemsContainer .item-row').forEach(row => {
+    const id = row.querySelector('.item-id').value;
+    const qty = Number(row.querySelector('.item-qty').value);
+    const price = Number(row.querySelector('.item-price').value);
+    if (id && qty && price) items.push({ idItem: id, quantidadeItem: qty, valorItem: price });
+  });
+
+  if (!dataCriacaoInput || items.length === 0) {
+    showToast('Preencha todos os campos', 'error');
+    return;
+  }
+
+  const dataCriacao = new Date(dataCriacaoInput).toISOString();
+  const data = await apiRequest(`/order/${encodeURIComponent(orderId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ valorTotal, dataCriacao, items })
+  });
+
+  if (data) {
+    showToast('Pedido atualizado com sucesso! ✅');
+    document.getElementById('editOrderModal').classList.remove('active');
+    loadOrders();
+  }
 }
 
 // ============ DELETAR PEDIDO ============

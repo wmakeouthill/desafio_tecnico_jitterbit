@@ -183,6 +183,44 @@
 
   </div>
 
+  <!-- Modal: Editar Pedido -->
+  <div id="editOrderModal" class="modal-overlay" onclick="closeEditModal(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title"><span>✏️</span> Editar Pedido</div>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label>Número do Pedido</label>
+            <input type="text" id="editNumeroPedido" readonly style="opacity:0.6;cursor:not-allowed">
+          </div>
+          <div class="form-group">
+            <label>Data de Criação</label>
+            <input type="datetime-local" id="editDataCriacao">
+          </div>
+        </div>
+
+        <div class="items-section">
+          <div class="items-header">
+            <h3>🍔 Itens do Pedido</h3>
+            <div class="order-total-badge">
+              Total: <strong id="editValorTotalDisplay">R$ 0,00</strong>
+            </div>
+          </div>
+          <input type="hidden" id="editValorTotal" value="0">
+          <div id="editItemsContainer"></div>
+          <button class="btn btn-outline btn-sm" onclick="addEditItem()" style="margin-top:10px">＋ Adicionar Item</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeEditModal()">Cancelar</button>
+        <button class="btn btn-success" onclick="saveEditOrder()">💾 Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts Modulares -->
   <script src="/js/utils.js"></script>
   <script src="/js/api.js"></script>
